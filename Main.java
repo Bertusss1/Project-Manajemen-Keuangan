@@ -16,14 +16,17 @@ public class Main {
             }
         }
 
-        // Inisialisasi objek untuk transaksi dan tabungan
-        TransaksiHandler transaksiHandler = new TransaksiHandler(); // management mode, loads saved transactions
+        // Extract username from email (part before '@')
+        String username = loggedInUser.getEmail().split("@")[0];
+
+        // Inisialisasi objek untuk transaksi dan tabungan dengan user-specific data
+        TransaksiHandler transaksiHandler = new TransaksiHandler(username); // management mode, loads saved transactions
         TransaksiList transaksiList = new TransaksiList();
         // Load saved transactions into transaksiList
         for (TransaksiHandler t : transaksiHandler.getTransactions()) {
             transaksiList.add(t);
         }
-        TransaksiRutinList transaksiRutinList = new TransaksiRutinList();
+        TransaksiRutinList transaksiRutinList = new TransaksiRutinList(username);
         Tabungan tabungan = new Tabungan(0); 
 
         boolean running = true;
@@ -93,6 +96,13 @@ public class Main {
                     System.out.print("Keterangan: ");
                     String keteranganInput = scanner.nextLine();
 
+                    // Validasi limit transaksi dan jumlah transaksi harian menggunakan loggedInUser
+                    if (!loggedInUser.canMakeTransaction(jumlahInput)) {
+                        System.out.printf("Transaksi melebihi batas maksimal Rp%,.2f atau jumlah transaksi harian sudah mencapai batas.%n",
+                            (loggedInUser instanceof AkunBiasa) ? AkunBiasa.TRANSACTION_LIMIT : AkunPremium.TRANSACTION_LIMIT);
+                        break;
+                    }
+
                     // Simpan transaksi
                     TransaksiHandler t = new TransaksiHandler(jenisInput, jumlahInput, tanggalInput, kategoriInput, keteranganInput);
                     transaksiList.add(t);
@@ -106,6 +116,9 @@ public class Main {
                     } else {
                         tabungan.setor(jumlahInput);
                     }
+
+                    // Catat transaksi di akun pengguna
+                    loggedInUser.recordTransaction(jumlahInput);
 
                     System.out.println("Transaksi berhasil dicatat!");
                     break;
@@ -262,7 +275,7 @@ public class Main {
                     break;
 
                 case 5: // === GENERATE LAPORAN ===
-                    System.out.println("Fitur generate laporan belum didukung dengan TransaksiList.");
+                    transaksiHandler.generateLaporan();
                     break;
 
                 case 6: // === KELOLA TRANSAKSI RUTIN ===

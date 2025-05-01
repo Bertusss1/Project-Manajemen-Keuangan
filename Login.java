@@ -29,10 +29,13 @@ public class Login {
             "password1", 1000000, "08123456789", "Jl. Contoh No. 1");
         AkunBiasa regular2 = new AkunBiasa("User Biasa 2", "regular2@email.com", 
             "password2", 2000000, "08234567890", "Jl. Contoh No. 2");
+        AkunPremium premium1 = new AkunPremium("User Premium1", "premium1@email.com", 
+            "password2", 2000000, "08234567890", "Jl. Contoh No. 2");
 
         // Username diambil dari bagian sebelum '@' dari email
         users.put("regular1", regular1);
         users.put("regular2", regular2);
+        users.put("premium1", premium1);
     }
 
     // Fungsi autentikasi login (cek username dan password)

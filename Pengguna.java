@@ -112,4 +112,15 @@ abstract class Pengguna {
         System.out.println("Jumlah Transaksi: " + jumlahTransaksi);
         this.tampilkanSaldo(); // Akan dipanggil dari subclass (override)
     }
+
+    // Tambahkan method canMakeTransaction untuk validasi limit transaksi
+    public boolean canMakeTransaction(double amount) {
+        // Default implementasi, bisa di override di subclass
+        return false;
+    }
+
+    // Tambahkan method recordTransaction untuk mencatat transaksi
+    public void recordTransaction(double amount) {
+        // Default implementasi, bisa di override di subclass
+    }
 }

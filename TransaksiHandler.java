@@ -15,7 +15,7 @@ public class TransaksiHandler implements LaporanKeuangan, Serializable {
 
     // Atribut untuk manajemen list transaksi
     private List<TransaksiHandler> transactions; // Daftar semua transaksi
-    private final String fileName = "transactions.dat"; // Nama file untuk simpan transaksi
+    private String fileName; // Nama file untuk simpan transaksi
     private int maxTransactions = 1000; // Batas maksimum transaksi yang disimpan
 
     // Konstruktor untuk membuat satu transaksi
@@ -28,8 +28,9 @@ public class TransaksiHandler implements LaporanKeuangan, Serializable {
         this.keterangan = keterangan != null ? keterangan : "";
     }
 
-    // Konstruktor untuk mode manajemen (tanpa data transaksi)
-    public TransaksiHandler() {
+    // Konstruktor untuk mode manajemen (tanpa data transaksi), dengan user-specific file
+    public TransaksiHandler(String username) {
+        this.fileName = "transactions_" + username + ".dat";
         this.transactions = loadTransactions(); 
     }
 
@@ -147,19 +148,33 @@ public class TransaksiHandler implements LaporanKeuangan, Serializable {
         }
     }
 
-    // Generate ringkasan laporan transaksi
+    // Generate ringkasan laporan transaksi yang lebih lengkap
     @Override
     public void generateLaporan() {
-        System.out.println("\n=== Laporan Transaksi ===");
+        System.out.println("\n=== Laporan Keuangan Lengkap ===");
         System.out.println("Total Transaksi: " + transactions.size());
 
-        long pemasukan = transactions.stream()
+        double totalPemasukan = transactions.stream()
             .filter(t -> t.getJenis().equalsIgnoreCase("Pemasukan"))
-            .count();
-        long pengeluaran = transactions.size() - pemasukan;
+            .mapToDouble(TransaksiHandler::getJumlah)
+            .sum();
 
-        System.out.println("Pemasukan: " + pemasukan + " transaksi");
-        System.out.println("Pengeluaran: " + pengeluaran + " transaksi");
-        System.out.println("=========================");
+        double totalPengeluaran = transactions.stream()
+            .filter(t -> t.getJenis().equalsIgnoreCase("Pengeluaran"))
+            .mapToDouble(TransaksiHandler::getJumlah)
+            .sum();
+
+        double saldoBersih = totalPemasukan - totalPengeluaran;
+
+        System.out.printf("Total Pemasukan: Rp %,.2f%n", totalPemasukan);
+        System.out.printf("Total Pengeluaran: Rp %,.2f%n", totalPengeluaran);
+        System.out.printf("Saldo Bersih: Rp %,.2f%n", saldoBersih);
+
+        double rataRataTransaksi = transactions.isEmpty() ? 0 :
+            transactions.stream().mapToDouble(TransaksiHandler::getJumlah).average().orElse(0);
+
+        System.out.printf("Rata-rata Nominal Transaksi: Rp %,.2f%n", rataRataTransaksi);
+
+        System.out.println("===============================");
     }
 }

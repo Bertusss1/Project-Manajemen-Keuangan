@@ -42,11 +42,20 @@ public class TransaksiRutinList implements Serializable {
 
     private Node tail;  // tail node to facilitate circular linked list
     private int size;
-    private final String fileName = "recurring_transactions.dat";
+    private String fileName;
 
     public TransaksiRutinList() {
         this.tail = null;
         this.size = 0;
+        this.fileName = "recurring_transactions.dat";
+        loadTransactions();
+    }
+
+    // New constructor with username for user-specific file
+    public TransaksiRutinList(String username) {
+        this.tail = null;
+        this.size = 0;
+        this.fileName = "recurring_transactions_" + username + ".dat";
         loadTransactions();
     }
 
