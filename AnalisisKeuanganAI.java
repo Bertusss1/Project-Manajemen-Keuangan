@@ -1,6 +1,8 @@
 import java.util.List;
 
-public class AnalisisKeuanganAI {
+import java.util.List;
+
+public class AnalisisKeuanganAI implements LaporanKeuangan {
     // Menyimpan daftar transaksi yang akan dianalisis
     private final List<TransaksiHandler> transaksiList;
 
@@ -54,6 +56,11 @@ public class AnalisisKeuanganAI {
 
     public boolean isNotifikasiAktif() {
         return notifikasiAktif;
+    }
+
+    @Override
+    public void generateLaporan() {
+        lakukanAnalisis();
     }
 
     // Fungsi utama untuk melakukan analisis keuangan

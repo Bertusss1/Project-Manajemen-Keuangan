@@ -4,7 +4,11 @@ import java.util.function.Consumer;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 
-public class TransaksiRutinList implements Serializable {
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.stream.Collectors;
+
+public class TransaksiRutinList implements Serializable, LaporanKeuangan {
     public static class TransaksiRutin implements Serializable {
         private final String namaTagihan;
         private final double jumlah;
@@ -85,6 +89,30 @@ public class TransaksiRutinList implements Serializable {
         return size;
     }
 
+    // Remove a recurring transaction by index (0-based)
+    public boolean removeAt(int index) {
+        if (index < 0 || index >= size || tail == null) {
+            return false;
+        }
+        if (size == 1) {
+            tail = null;
+            size = 0;
+            return true;
+        }
+        Node current = tail.next;
+        Node prev = tail;
+        for (int i = 0; i < index; i++) {
+            prev = current;
+            current = current.next;
+        }
+        prev.next = current.next;
+        if (current == tail) {
+            tail = prev;
+        }
+        size--;
+        return true;
+    }
+
     // Iterate through the list once, applying the given action to each TransaksiRutin
     public void iterateOnce(Consumer<TransaksiRutin> action) {
         if (tail == null) return;
@@ -151,5 +179,39 @@ public class TransaksiRutinList implements Serializable {
         } while (current != tail.next);
 
         return reminders;
+    }
+
+    @Override
+    public void generateLaporan() {
+        System.out.println("\n=== Laporan Transaksi Rutin ===");
+        if (tail == null) {
+            System.out.println("Tidak ada transaksi rutin.");
+            return;
+        }
+
+        // Total jumlah tagihan rutin
+        double totalTagihan = 0;
+        List<TransaksiRutin> allTransactions = new ArrayList<>();
+        Node current = tail.next;
+        do {
+            totalTagihan += current.data.getJumlah();
+            allTransactions.add(current.data);
+            current = current.next;
+        } while (current != tail.next);
+
+        System.out.printf("Total Tagihan Rutin: Rp %,.2f%n", totalTagihan);
+
+        // Tampilkan daftar tagihan dengan tanggal jatuh tempo
+        System.out.println("Daftar Tagihan Rutin:");
+        allTransactions.stream()
+            .sorted(Comparator.comparing(t -> {
+                try {
+                    return LocalDate.parse(t.getTanggalJatuhTempo(), DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+                } catch (Exception e) {
+                    return LocalDate.MAX;
+                }
+            }))
+            .forEach(t -> System.out.printf("- %s: Rp %,.2f, Jatuh Tempo: %s%n",
+                t.getNamaTagihan(), t.getJumlah(), t.getTanggalJatuhTempo()));
     }
 }

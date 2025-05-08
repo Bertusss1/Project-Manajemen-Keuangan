@@ -281,12 +281,13 @@ public class Main {
                 case 6: // === KELOLA TRANSAKSI RUTIN ===
                     boolean kembaliRutin = false;
                     while (!kembaliRutin) {
-                        System.out.println("\n=== Kelola Transaksi Rutin ===");
-                        System.out.println("1. Tambah Transaksi Rutin");
-                        System.out.println("2. Lihat Semua Transaksi Rutin");
-                        System.out.println("3. Cek Reminder Bulanan");
+                        System.out.println("\n=== Kelola Tagihan ===");
+                        System.out.println("1. Tambah Transaksi Tagihan");
+                        System.out.println("2. Cek Reminder Bulanan");
+                        System.out.println("3. Generate Laporan Transaksi Rutin");
+                        System.out.println("4. Bayar Tagihan");
                         System.out.println("0. Kembali ke Menu Utama");
-                        System.out.print("Pilih menu (0-3): ");
+                        System.out.print("Pilih menu (0-4): ");
 
                         int pilihanRutin = scanner.nextInt();
                         scanner.nextLine();
@@ -295,11 +296,35 @@ public class Main {
                             case 1:
                                 System.out.print("Nama Tagihan: ");
                                 String namaTagihan = scanner.nextLine();
-                                System.out.print("Jumlah: ");
-                                double jumlahTagihan = scanner.nextDouble();
-                                scanner.nextLine();
-                                System.out.print("Tanggal Jatuh Tempo (dd/MM/yyyy): ");
-                                String tanggalJatuhTempo = scanner.nextLine();
+
+                                double jumlahTagihan = 0;
+                                while (true) {
+                                    System.out.print("Nominal: ");
+                                    String input = scanner.nextLine();
+                                    try {
+                                        jumlahTagihan = Double.parseDouble(input);
+                                        if (jumlahTagihan <= 0) {
+                                            System.out.println("Nominal harus lebih dari 0. Silakan coba lagi.");
+                                            continue;
+                                        }
+                                        break;
+                                    } catch (NumberFormatException e) {
+                                        System.out.println("Input tidak valid. Harap masukkan angka.");
+                                    }
+                                }
+
+                                String tanggalJatuhTempo = "";
+                                while (true) {
+                                    System.out.print("Tanggal Jatuh Tempo (dd/MM/yyyy): ");
+                                    String inputTanggal = scanner.nextLine();
+                                    try {
+                                        LocalDate.parse(inputTanggal, DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+                                        tanggalJatuhTempo = inputTanggal;
+                                        break;
+                                    } catch (DateTimeParseException e) {
+                                        System.out.println("Format tanggal tidak valid. Harap masukkan tanggal dengan format dd/MM/yyyy.");
+                                    }
+                                }
 
                                 transaksiRutinList.add(namaTagihan, jumlahTagihan, tanggalJatuhTempo);
                                 transaksiRutinList.saveTransactions(); // Save after adding
@@ -307,14 +332,6 @@ public class Main {
                                 break;
 
                             case 2:
-                                System.out.println("\nDaftar Transaksi Rutin:");
-                                transaksiRutinList.iterateOnce(node -> {
-                                    System.out.printf("- %s: Rp %,.2f, Jatuh Tempo: %s%n",
-                                        node.getNamaTagihan(), node.getJumlah(), node.getTanggalJatuhTempo());
-                                });
-                                break;
-
-                            case 3:
                                 System.out.println("\nReminder Bulanan Transaksi Rutin:");
                                 List<TransaksiRutinList.TransaksiRutin> reminders = transaksiRutinList.getRemindersForToday();
                                 if (reminders.isEmpty()) {
@@ -324,6 +341,75 @@ public class Main {
                                         System.out.printf("Ingatkan: %s sebesar Rp %,.2f jatuh tempo hari ini (%s)%n",
                                             reminder.getNamaTagihan(), reminder.getJumlah(), reminder.getTanggalJatuhTempo());
                                     }
+                                }
+                                break;
+
+                            case 3:
+                                transaksiRutinList.generateLaporan();
+                                break;
+
+                            case 4:
+                                // New option: Bayar Tagihan
+                                if (transaksiRutinList.size() == 0) {
+                                    System.out.println("Tidak ada tagihan untuk dibayar.");
+                                    break;
+                                }
+                                System.out.println("\nDaftar Tagihan:");
+                                List<TransaksiRutinList.TransaksiRutin> allBills = new ArrayList<>();
+                                transaksiRutinList.iterateOnce(allBills::add);
+                                for (int i = 0; i < allBills.size(); i++) {
+                                    TransaksiRutinList.TransaksiRutin bill = allBills.get(i);
+                                    System.out.printf("%d. %s - Rp %,.2f - Jatuh Tempo: %s%n",
+                                        i + 1, bill.getNamaTagihan(), bill.getJumlah(), bill.getTanggalJatuhTempo());
+                                }
+                                System.out.print("Pilih nomor tagihan yang ingin dibayar: ");
+                                int billChoice = -1;
+                                try {
+                                    billChoice = scanner.nextInt();
+                                    scanner.nextLine();
+                                } catch (InputMismatchException e) {
+                                    System.out.println("Input tidak valid.");
+                                    scanner.nextLine();
+                                    break;
+                                }
+                                if (billChoice < 1 || billChoice > allBills.size()) {
+                                    System.out.println("Pilihan tidak valid.");
+                                    break;
+                                }
+                                TransaksiRutinList.TransaksiRutin selectedBill = allBills.get(billChoice - 1);
+                                double amountToPay = selectedBill.getJumlah();
+
+                                // Check saldo cukup
+                                if (!loggedInUser.canMakeTransaction(amountToPay)) {
+                                    System.out.println("Saldo tidak mencukupi atau batas transaksi tercapai.");
+                                    break;
+                                }
+                                if (!tabungan.tarik(amountToPay)) {
+                                    System.out.println("Saldo tabungan tidak mencukupi.");
+                                    break;
+                                }
+
+                                // Record transaction as Pengeluaran
+                                TransaksiHandler paymentTransaction = new TransaksiHandler(
+                                    "Pengeluaran",
+                                    amountToPay,
+                                    LocalDate.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")),
+                                    "Tagihan (Listrik/Air/Internet)",
+                                    "Pembayaran tagihan " + selectedBill.getNamaTagihan()
+                                );
+                                transaksiList.add(paymentTransaction);
+                                transaksiHandler.addTransaction(paymentTransaction);
+
+                                // Deduct saldo in user account
+                                loggedInUser.recordTransaction(amountToPay);
+
+                                // Remove the paid bill from recurring list
+                                boolean removed = transaksiRutinList.removeAt(billChoice - 1);
+                                if (removed) {
+                                    transaksiRutinList.saveTransactions();
+                                    System.out.println("Tagihan berhasil dibayar dan dihapus dari daftar.");
+                                } else {
+                                    System.out.println("Gagal menghapus tagihan dari daftar.");
                                 }
                                 break;
 
